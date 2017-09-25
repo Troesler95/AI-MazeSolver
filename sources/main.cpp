@@ -14,6 +14,7 @@
 #include "Maze.h"
 #include "Shlwapi.h"
 #pragma comment(lib, "Shlwapi.lib")
+#define MAX_BUF 256
 using namespace std;
 
 static std::string PROG_NAME = "";
@@ -88,8 +89,9 @@ Maze InitializeMazeFromFile(std::string iniFilePath)
 	}
 	catch (exception ex)
 	{
-		/*bubble exception up*/
-		throw ex;
+		HandleException(ex);
+		cout << "Press ENTER to continue..." << endl;
+		cin.get();
 	}
 }
 
@@ -405,21 +407,22 @@ void Menu(std::string iniFilePath, bool output, std::pair<int, int> startPair, s
 /*MAIN*/
 int main(int argc, char* argv[], char* envp[])
 {
-	std::string iniFilePath, outFilePath;
+	std::string iniFile, outFile;
 	std::pair<int, int> startPair, goalPair;
 	bool output = false;
+	char pwd_buf[MAX_BUF], *iniFilePath;
 
 	PROG_NAME = "Maze Finder";
 
 	// If used with command line arguments
 	if (argc > 1)
 	{
-		ParseCommandLine(argc, argv, iniFilePath, outFilePath, startPair, goalPair);
+		ParseCommandLine(argc, argv, iniFile, outFile, startPair, goalPair);
 		/*HOTFIX CODE*/
 		try 
 		{
-			if (!outFilePath.empty())
-				output = std::stoi(outFilePath.c_str());
+			if (!outFile.empty())
+				output = std::stoi(outFile.c_str());
 			else
 				output = false;
 		}
@@ -434,11 +437,18 @@ int main(int argc, char* argv[], char* envp[])
 	// else assign default values
 	else
 	{
-		iniFilePath = "maze.csv";
-		outFilePath = "";
-		startPair = goalPair = std::pair<int, int>(-1,-1);
+		//pwd_buf = new char[MAX_BUF];
+		iniFilePath = new char[MAX_BUF] {'\0'};
+
+		GetCurrentDirectoryA(MAX_BUF, (LPSTR)pwd_buf);
+		cout << pwd_buf << endl;
+		strcat_s(iniFilePath, (size_t)MAX_BUF, pwd_buf);
+		strcat_s(iniFilePath, (size_t)MAX_BUF, "\\maze.csv");
+		iniFile = std::string(iniFilePath);
+		outFile = "";
+		startPair = goalPair = std::pair<int, int>(-1, -1);
 	}
-	Menu(iniFilePath, output, startPair, goalPair);
+	Menu(iniFile, output, startPair, goalPair);
 	system("pause");
 	return 0;
 }

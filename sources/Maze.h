@@ -5,6 +5,8 @@
 #include <queue>
 #include <stack>
 
+#pragma region Space Struct Definition
+
 /** Space
  * Structure to use in BFS/DFS as nodes. 
  * In hindsight, probably would have been better to name node
@@ -18,12 +20,12 @@ struct Space {
 
 	/*Parameterized constructor for this structure*/
 	Space(int pos1, int pos2, Space* prnt=nullptr)
-	{
-		x = pos1;
-		y = pos2;
-		parent = prnt;
-	}
+		: x(pos1), y(pos2), parent(prnt) {}
 };
+
+#pragma endregion
+
+#pragma region Maze Class Definition
 
 /** Maze
  * A class which encapsulates the logic of structuring and solving mazes
@@ -61,6 +63,9 @@ private:
 	 */
 	bool** _visited;
 
+	/*Helper method to allocate memory for visited matrix*/
+	bool** allocateVisited(const int, const int);
+
 	/*Helper method to reset the visited matrix before performing BFS or DFS*/
 	void resetVisited();
 	/**
@@ -89,15 +94,33 @@ public:
 	 * These values can be temporary values (-1, -1) and be set later.
 	 */
 	Maze(int, int, std::pair<int, int>, std::pair<int, int>);
+	/** Copy Constructor
+	 * Because I use dynamic memory allocated by yours truly,
+	 * A copy and move constructor are required to ensure proper
+	 * trade-off of the 2D _visited array!
+	 */
+	Maze(const Maze&);
+	/** RValue (Move) Constructor
+	 * Because I use dynamic memory allocated by yours truly,
+	 * A copy and move constructor are required to ensure proper
+	 * trade-off of the 2D _visited array!
+	 */
+	Maze(Maze&&);
 	/** Deconstructor
 	 * Cleans up the pointers in use with this class
 	 */
 	~Maze();
+	/** Assignment Operator
+	 */
+	Maze& operator=(const Maze right);
+	#pragma region Search Algorithms
+	
 	/** Breadth-first Search
 	 * Finds the path to the goal using the BFS algortihm.
 	 * Returns a pointer to the top of the path "stack"
 	 */
 	void BFS();
+
 	/** Depth-first Search
 	 * Finds the path to the goal using the DFS algortihm.
 	 * Returns a pointer to top of the the path "stack"
@@ -106,6 +129,13 @@ public:
 	 */
 	void DFS();
 
+	/** Greedy Search
+	 * Uses heuristic knowledge of the maze
+	 * to solve the maze in a more efficient way
+     */
+
+	#pragma endregion
+	
 	/** GETTERS FOR PATH SOLUTION **/
 	Space* GetBFSResult() { return _bfsSolution; };
 	Space* GetDFSResult() { return _dfsSolution; };
@@ -143,4 +173,7 @@ public:
 	bool IsValidPair(int, int);
 	bool IsValidPair(std::pair<int, int>);
 };
+
+#pragma endregion
+
 #endif

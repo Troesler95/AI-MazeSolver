@@ -3,14 +3,19 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <string.h>
 using namespace std;
 
 Maze::Maze()
 {
 	/*DEFAULT DOES NOTHING, SHOULDNT BE USED*/
+	_bfsSolution = nullptr;
+	_dfsSolution = nullptr;
+	_visited = nullptr;
 }
 
 Maze::Maze(int x, int y, pair<int, int> begin, pair<int,int> end)
+	: _begin(begin), _dest(end), _visited(allocateVisited(y,x))
 {
 	_mazeMatrix = vector<vector<char>>(y, vector<char>(x, ' '));
 	_bfsQueue = queue<Space*>();
@@ -19,21 +24,54 @@ Maze::Maze(int x, int y, pair<int, int> begin, pair<int,int> end)
 	_dfsSolution = nullptr;
 	_bfsTotal = 0;
 	_dfsTotal = 0;
-	_begin = begin;
-	_dest = end;
+}
 
-	/*PROBLEM: booleans are not initialized as pointer to pointer lists*/
-	/*Initialize a boolean matrix to keep track of visited nodes*/
-	int a = _mazeMatrix.size();
-	int b = _mazeMatrix[0].size();
-	// 2D array of bool*
-	_visited = new bool*[a];
-	for (unsigned i = 0; i < a; ++i)
+Maze::Maze(const Maze& existing)
+	: _visited(allocateVisited(existing._mazeMatrix.size(), existing._mazeMatrix[0].size()))
+{
+	_mazeMatrix = existing._mazeMatrix;
+	_bfsQueue = existing._bfsQueue;
+	_dfsStack = existing._dfsStack;
+	_bfsSolution = existing._bfsSolution;
+	_dfsSolution = existing._dfsSolution;
+	_bfsTotal = existing._bfsTotal;
+	_dfsTotal = existing._dfsTotal;
+	_begin = existing._begin;
+	_dest = existing._dest;
+
+	// TODO: Find more concise copy syntax between the old and new object
+	/*if (existing._visited)
 	{
-		_visited[i] = new bool[b] {false};
-		for (unsigned j = 0; j < b; ++j)
-			_visited[i][j] = new bool{ false };
-	}
+		bool** temp = existing._visited;
+		std::swap(_visited, temp);
+	}*/
+
+	if(existing._visited != nullptr)
+		for (unsigned i = 0; i < _mazeMatrix.size() - 1; ++i)
+			for (unsigned j = 0; j < _mazeMatrix[0].size() - 1; ++j)
+				_visited[i][j] = existing._visited[i][j];
+}
+
+Maze::Maze(Maze&& existing)
+	: _visited(allocateVisited(existing._mazeMatrix.size(), existing._mazeMatrix[0].size()))
+{
+	_mazeMatrix = existing._mazeMatrix;
+	_bfsQueue = existing._bfsQueue;
+	_dfsStack = existing._dfsStack;
+	_bfsSolution = existing._bfsSolution;
+	_dfsSolution = existing._dfsSolution;
+	_bfsTotal = existing._bfsTotal;
+	_dfsTotal = existing._dfsTotal;
+	_begin = existing._begin;
+	_dest = existing._dest;
+	
+	// Come back to this...
+	//std::swap(_visited, existing._visited);
+
+	if(existing._visited != nullptr)
+		for (unsigned i = 0; i < _mazeMatrix.size() - 1; ++i)
+			for (unsigned j = 0; j < _mazeMatrix[0].size() - 1; ++j)
+				_visited[i][j] = existing._visited[i][j];
 }
 
 Maze::~Maze()
@@ -43,8 +81,20 @@ Maze::~Maze()
 	if(_dfsSolution != nullptr)
 		delete _dfsSolution;
 
-	/*for (unsigned i = 0; i < _mazeMatrix.size(); ++i)
-		delete[] _visited[i];*/
+	if (_visited != nullptr)
+	{
+		for (unsigned i = 0; i < _mazeMatrix.size(); ++i)
+			delete[] _visited[i];
+		delete[] _visited;
+	}
+}
+
+Maze& Maze::operator=(Maze right)
+{
+	this->~Maze();
+	// use rvalue constructor to deep copy object
+	new(this)Maze(std::move(right));
+	return *this;
 }
 
 void Maze::BFS()
@@ -128,14 +178,14 @@ bool Maze::SetStart(pair<int, int> n_start)
 		&& _mazeMatrix[n_start.second - 1][n_start.first - 1] != 'G'
 		&& _mazeMatrix[n_start.second - 1][n_start.first - 1] != 'S')
 	{
-		pair<int, int> temp = this->_begin;
+		pair<int, int> temp = _begin;
 		/*If begin has been set before*/
 		if(temp != make_pair(-1,-1))
 			/*Remove old start*/
 			_mazeMatrix[temp.second - 1][temp.first - 1] = ' ';
 
 		/*Set new*/
-		this->_begin = n_start;
+		_begin = n_start;
 		_mazeMatrix[n_start.second - 1][n_start.first - 1] = 'S';
 		return true;
 	}
@@ -192,8 +242,8 @@ bool Maze::SetOutputFile(char* nFilePath)
 	if (nPathString.empty())
 		throw invalid_argument("MAZE ERROR: Cannot set to null output file path!");
 
-	std::strcat(_outFilePathBFS, (nPathString + "_bfs.out").c_str());
-	std::strcat(_outFilePathDFS, (nPathString + "_dfs.out").c_str());
+	strcat_s(_outFilePathBFS, sizeof(_outFilePathBFS), (nPathString + "_bfs.out").c_str());
+	strcat_s(_outFilePathDFS, sizeof(_outFilePathDFS), (nPathString + "_dfs.out").c_str());
 }
 
 bool Maze::IsValidPair(int j, int k)
@@ -206,6 +256,18 @@ bool Maze::IsValidPair(int j, int k)
 bool Maze::IsValidPair(pair<int, int> p)
 {
 	return IsValidPair(p.first, p.second);
+}
+
+bool** Maze::allocateVisited(const int a, const int b)
+{
+	bool** temp = nullptr;
+	if (a > 0 && b > 0)
+	{
+		temp = new bool*[a];
+		for (unsigned i = 0; i < a; ++i)
+			temp[i] = new bool[b] {false};
+	}
+	return temp;
 }
 
 void Maze::resetVisited()
