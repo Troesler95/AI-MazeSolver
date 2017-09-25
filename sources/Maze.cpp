@@ -4,13 +4,16 @@
 #include <iostream>
 #include <iomanip>
 #include <string.h>
+#include <math.h>
 using namespace std;
 
 Maze::Maze()
 {
-	/*DEFAULT DOES NOTHING, SHOULDNT BE USED*/
 	_bfsSolution = nullptr;
 	_dfsSolution = nullptr;
+	_greedySolution = nullptr;
+	_bfsTotal = _dfsTotal = _greedyTotal = 0;
+	_dest = _begin = make_pair(-1, -1);
 	_visited = nullptr;
 }
 
@@ -20,8 +23,15 @@ Maze::Maze(int x, int y, pair<int, int> begin, pair<int,int> end)
 	_mazeMatrix = vector<vector<char>>(y, vector<char>(x, ' '));
 	_bfsQueue = queue<Space*>();
 	_dfsStack = stack<Space*>();
+
+	/*comp = function<bool(Space*, Space*)>(bind(&Maze::compDistance, *this, 
+		std::placeholders::_1, std::placeholders::_2));
+	_greedyPQ = priority_queue<Space*, vector<Space*>,
+		function<bool(Space*, Space*)>>(comp);*/
+
 	_bfsSolution = nullptr;
 	_dfsSolution = nullptr;
+	_greedySolution = nullptr;
 	_bfsTotal = 0;
 	_dfsTotal = 0;
 }
@@ -32,10 +42,13 @@ Maze::Maze(const Maze& existing)
 	_mazeMatrix = existing._mazeMatrix;
 	_bfsQueue = existing._bfsQueue;
 	_dfsStack = existing._dfsStack;
+	_greedyPQ = existing._greedyPQ;
 	_bfsSolution = existing._bfsSolution;
 	_dfsSolution = existing._dfsSolution;
+	_greedySolution = existing._greedySolution;
 	_bfsTotal = existing._bfsTotal;
 	_dfsTotal = existing._dfsTotal;
+	_greedyTotal = existing._greedyTotal;
 	_begin = existing._begin;
 	_dest = existing._dest;
 
@@ -58,10 +71,13 @@ Maze::Maze(Maze&& existing)
 	_mazeMatrix = existing._mazeMatrix;
 	_bfsQueue = existing._bfsQueue;
 	_dfsStack = existing._dfsStack;
+	_greedyPQ = existing._greedyPQ;
 	_bfsSolution = existing._bfsSolution;
 	_dfsSolution = existing._dfsSolution;
+	_greedySolution = existing._greedySolution;
 	_bfsTotal = existing._bfsTotal;
 	_dfsTotal = existing._dfsTotal;
+	_greedyTotal = existing._greedyTotal;
 	_begin = existing._begin;
 	_dest = existing._dest;
 	
@@ -80,6 +96,8 @@ Maze::~Maze()
 		delete _bfsSolution;
 	if(_dfsSolution != nullptr)
 		delete _dfsSolution;
+	if (_greedySolution != nullptr)
+		delete _greedySolution;
 
 	if (_visited != nullptr)
 	{
@@ -169,6 +187,59 @@ void Maze::DFS(Space* vertex)
 			DFS(new Space(n_x, n_y - 1, vertex));
 	}
 	_dfsStack.pop();
+}
+
+float Maze::calcEDistanceToGoal(int x, int y) const
+{
+	return sqrt(pow(x-_dest.first, 2) + pow(y-_dest.second, 2));
+}
+
+/*bool Maze::compDistance(Space* lhs, Space* rhs)
+{
+	return (calcEDistanceToGoal(lhs->x, lhs->y) > calcEDistanceToGoal(rhs->x, rhs->y));
+}*/
+
+void Maze::GreedySearch()
+{
+	resetMaze();
+	resetVisited();
+
+	/*comp = function<bool(Space*, Space*)>(bind(&Maze::compDistance, *this,
+		std::placeholders::_1, std::placeholders::_2));*/
+
+	_greedyPQ = priority_queue<Space*, vector<Space*>,
+		function<bool(Space*, Space*)>>([this](Space* a, Space* b) -> bool {
+		return (calcEDistanceToGoal(a->x, a->y) > calcEDistanceToGoal(b->x, b->y)); 
+	});
+
+	_greedyPQ.push(new Space(_begin.first, _begin.second));
+	while (!_greedyPQ.empty())
+	{
+		Space* cur = _greedyPQ.top();
+		_greedyPQ.pop();
+		int n_x = cur->x, n_y = cur->y;
+
+		if (_mazeMatrix[n_y - 1][n_x - 1] == 'G')
+		{
+			_greedySolution = cur;
+			cout << "Greedy: Found goal!" << endl;
+			return;
+		}
+
+		if (IsValidPair(n_x + 1, n_y) && !_visited[n_y - 1][n_x])
+			_greedyPQ.push(new Space(n_x + 1, n_y, cur));
+
+		if (IsValidPair(n_x - 1, n_y) && !_visited[n_y - 1][n_x - 2])
+			_greedyPQ.push(new Space(n_x - 1, n_y, cur));
+
+		if (IsValidPair(n_x, n_y + 1) && !_visited[n_y][n_x - 1])
+			_greedyPQ.push(new Space(n_x, n_y + 1, cur));
+
+		if (IsValidPair(n_x, n_y - 1) && !_visited[n_y - 2][n_x - 1])
+			_greedyPQ.push(new Space(n_x, n_y - 1, cur));
+
+		_visited[n_y - 1][n_x - 1] = true;
+	}
 }
 
 bool Maze::SetStart(pair<int, int> n_start)
@@ -511,6 +582,94 @@ void Maze::PrintDFSResult()
 	{
 		cout << '(' << dfsPathVec[i].first + 1 << ", "
 			<< dfsPathVec[i].second + 1 << ')';
+		if (i != 0)
+			cout << ", ";
+	}
+	cout << endl;
+	cout << "Press enter to continue!" << endl;
+	std::cin.ignore();
+}
+
+void Maze::PrintGreedyResult()
+{
+	int printedWidth = (_mazeMatrix[0].size() * 2) + 2;
+	int visitedTotal = 0;
+	std::vector<std::pair<int, int>> greedyPathVec = std::vector<std::pair<int, int>>();
+	Space* temp = _greedySolution;
+	/*FOLLOW PARENTS*/
+	while (temp->parent != nullptr)
+	{
+		greedyPathVec.push_back(std::pair<int, int>(temp->x - 1, temp->y - 1));
+		temp = temp->parent;
+	}
+
+	/*TOP ROW*/
+	for (int i = 0; i < printedWidth; ++i)
+	{
+		if (i == 0)
+			cout << ((char)218);
+		else if (i == printedWidth - 1)
+			cout << ((char)191);
+		else
+			cout << ((char)196);
+	}
+	cout << endl;
+
+	/*MATRIX VALUES*/
+	for (int i = _mazeMatrix.size() - 1; i >= 0; --i)
+	{
+		cout << '|';
+		for (int j = 0; j < _mazeMatrix[0].size(); ++j)
+		{
+			if ((std::find(greedyPathVec.begin(), greedyPathVec.end(), std::pair<int, int>(j, i)) != greedyPathVec.end())
+				&& (_mazeMatrix[i][j] != 'G'))
+				cout << '*';
+			else
+				cout << _mazeMatrix[i][j];
+
+			if (j == _mazeMatrix[0].size() - 1)
+				cout << " |";
+			else
+				cout << '|';
+			if (_visited[i][j]) ++visitedTotal;
+		}
+		cout << endl;
+		/*ROW SEPARATOR*/
+		if (i != 0)
+		{
+			for (int i = 0; i < printedWidth; ++i)
+			{
+				if (i == 0)
+					cout << '|';
+				else if (i == printedWidth - 1)
+					cout << '|';
+				else
+					cout << ((char)196);
+			}
+			cout << endl;
+		}
+	}
+
+	/*BOTTOM ROW*/
+	for (int i = 0; i < printedWidth; ++i)
+	{
+		if (i == 0)
+			cout << ((char)192);
+		else if (i == printedWidth - 1)
+			cout << ((char)217);
+		else
+			cout << ((char)196);
+	}
+	cout << endl;
+
+	cout << "Total nodes visited: " << visitedTotal << endl;
+
+	/*PRINT PATH*/
+	cout << "DFS Path: " << endl;
+	for (int i = greedyPathVec.size() - 1; i >= 0; --i)
+	{
+		cout << '(' << greedyPathVec[i].first + 1 << ", "
+			<< greedyPathVec[i].second + 1 << ')';
 		if (i != 0)
 			cout << ", ";
 	}

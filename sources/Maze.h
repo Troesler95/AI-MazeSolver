@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <stack>
+#include <functional>
 
 #pragma region Space Struct Definition
 
@@ -48,14 +49,25 @@ private:
 	Space* _bfsSolution;
 	/*Internal stack used in DFS*/
 	std::stack<Space*> _dfsStack;
+
+	float calcEDistanceToGoal(int, int) const;
+	// bool compDistance(Space*, Space*);
+
+	//std::function<bool(Space*, Space*)> comp;
+
+	/*Internal priority queue for use with greedy search*/
+	std::priority_queue<Space*, std::vector<Space*>, std::function<bool(Space*, Space*)>> _greedyPQ;
+	Space* _greedySolution;
+
 	/*Filepath for output of maze solutions*/
-	char* _outFilePathBFS;
+	char* _outFilePathBFS; 
 	char* _outFilePathDFS;
 	/*pointer to the 'top' node in the DFS path found*/
 	Space* _dfsSolution;
 	/*Integer counters for number of nodes visited*/
 	int _bfsTotal;
 	int _dfsTotal;
+	int _greedyTotal;
 	/**
 	 * A 2-D array of bools (pointers to an array of pointers)
 	 * This is used in figuring which nodes have been visited
@@ -133,6 +145,7 @@ public:
 	 * Uses heuristic knowledge of the maze
 	 * to solve the maze in a more efficient way
      */
+	void GreedySearch();
 
 	#pragma endregion
 	
@@ -149,6 +162,7 @@ public:
 	void PrintMaze();
 	void PrintBFSResult();
 	void PrintDFSResult();
+	void PrintGreedyResult();
 
 	void FilePrintBFSResult(char*);
 	void FilePrintDFSResult(char*);
