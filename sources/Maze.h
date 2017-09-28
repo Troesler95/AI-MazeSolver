@@ -15,13 +15,13 @@
  */
 struct Space {
 	/*The X and Y co-ordinate in the maze which this structure represents*/
-	int x, y;
+	int x, y, cost;
 	/*This is used to back-trace after a solution is found (similar to a stack structure)*/
 	Space* parent;
 
 	/*Parameterized constructor for this structure*/
-	Space(int pos1, int pos2, Space* prnt=nullptr)
-		: x(pos1), y(pos2), parent(prnt) {}
+	Space(int pos1, int pos2, Space* prnt=nullptr, int cost=0)
+		: x(pos1), y(pos2), parent(prnt), cost(cost) {}
 };
 
 #pragma endregion
@@ -58,6 +58,10 @@ private:
 	/*Internal priority queue for use with greedy search*/
 	std::priority_queue<Space*, std::vector<Space*>, std::function<bool(Space*, Space*)>> _greedyPQ;
 	Space* _greedySolution;
+
+	float calcFullDistanceToGoal(int, int, int) const;
+	std::priority_queue<Space*, std::vector<Space*>, std::function<bool(Space*, Space*)>> _astarPQ;
+	Space* _astarSolution;
 
 	/*Filepath for output of maze solutions*/
 	char* _outFilePathBFS; 
@@ -147,6 +151,8 @@ public:
      */
 	void GreedySearch();
 
+	void AStarSearch();
+
 	#pragma endregion
 	
 	/** GETTERS FOR PATH SOLUTION **/
@@ -163,6 +169,7 @@ public:
 	void PrintBFSResult();
 	void PrintDFSResult();
 	void PrintGreedyResult();
+	void PrintAStarResult();
 
 	void FilePrintBFSResult(char*);
 	void FilePrintDFSResult(char*);

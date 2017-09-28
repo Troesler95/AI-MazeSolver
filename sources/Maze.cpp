@@ -12,6 +12,7 @@ Maze::Maze()
 	_bfsSolution = nullptr;
 	_dfsSolution = nullptr;
 	_greedySolution = nullptr;
+	_astarSolution = nullptr;
 	_bfsTotal = _dfsTotal = _greedyTotal = 0;
 	_dest = _begin = make_pair(-1, -1);
 	_visited = nullptr;
@@ -32,6 +33,7 @@ Maze::Maze(int x, int y, pair<int, int> begin, pair<int,int> end)
 	_bfsSolution = nullptr;
 	_dfsSolution = nullptr;
 	_greedySolution = nullptr;
+	_astarSolution = nullptr;
 	_bfsTotal = 0;
 	_dfsTotal = 0;
 }
@@ -46,6 +48,7 @@ Maze::Maze(const Maze& existing)
 	_bfsSolution = existing._bfsSolution;
 	_dfsSolution = existing._dfsSolution;
 	_greedySolution = existing._greedySolution;
+	_astarSolution = existing._astarSolution;
 	_bfsTotal = existing._bfsTotal;
 	_dfsTotal = existing._dfsTotal;
 	_greedyTotal = existing._greedyTotal;
@@ -75,6 +78,7 @@ Maze::Maze(Maze&& existing)
 	_bfsSolution = existing._bfsSolution;
 	_dfsSolution = existing._dfsSolution;
 	_greedySolution = existing._greedySolution;
+	_astarSolution = existing._astarSolution;
 	_bfsTotal = existing._bfsTotal;
 	_dfsTotal = existing._dfsTotal;
 	_greedyTotal = existing._greedyTotal;
@@ -189,20 +193,11 @@ void Maze::DFS(Space* vertex)
 	_dfsStack.pop();
 }
 
-float Maze::calcEDistanceToGoal(int x, int y) const
-{
-	return sqrt(pow(x-_dest.first, 2) + pow(y-_dest.second, 2));
-}
-
-/*bool Maze::compDistance(Space* lhs, Space* rhs)
-{
-	return (calcEDistanceToGoal(lhs->x, lhs->y) > calcEDistanceToGoal(rhs->x, rhs->y));
-}*/
-
 void Maze::GreedySearch()
 {
 	resetMaze();
 	resetVisited();
+	int totalCost = 0;
 
 	/*comp = function<bool(Space*, Space*)>(bind(&Maze::compDistance, *this,
 		std::placeholders::_1, std::placeholders::_2));*/
@@ -218,29 +213,104 @@ void Maze::GreedySearch()
 		Space* cur = _greedyPQ.top();
 		_greedyPQ.pop();
 		int n_x = cur->x, n_y = cur->y;
+		totalCost += cur->cost;
 
 		if (_mazeMatrix[n_y - 1][n_x - 1] == 'G')
 		{
 			_greedySolution = cur;
 			cout << "Greedy: Found goal!" << endl;
+			cout << "Total cost: " << totalCost << endl;
 			return;
 		}
 
 		if (IsValidPair(n_x + 1, n_y) && !_visited[n_y - 1][n_x])
-			_greedyPQ.push(new Space(n_x + 1, n_y, cur));
+			_greedyPQ.push(new Space(n_x + 1, n_y, cur, 2));
 
 		if (IsValidPair(n_x - 1, n_y) && !_visited[n_y - 1][n_x - 2])
-			_greedyPQ.push(new Space(n_x - 1, n_y, cur));
+			_greedyPQ.push(new Space(n_x - 1, n_y, cur, 4));
 
 		if (IsValidPair(n_x, n_y + 1) && !_visited[n_y][n_x - 1])
-			_greedyPQ.push(new Space(n_x, n_y + 1, cur));
+			_greedyPQ.push(new Space(n_x, n_y + 1, cur, 3));
 
 		if (IsValidPair(n_x, n_y - 1) && !_visited[n_y - 2][n_x - 1])
-			_greedyPQ.push(new Space(n_x, n_y - 1, cur));
+			_greedyPQ.push(new Space(n_x, n_y - 1, cur, 1));
 
 		_visited[n_y - 1][n_x - 1] = true;
 	}
 }
+
+void Maze::AStarSearch() 
+{
+	resetMaze();
+	resetVisited();
+	int fval = 0, totalCost = 0;
+	/* This does not work! It sends the SAME fval. It should be different based on the space itself
+	 * Add a value in Space for cost of move?
+	 */
+	_astarPQ = priority_queue<Space*, vector<Space*>,
+		function<bool(Space*, Space*)>>([this](Space* a, Space* b)->bool {
+		return (calcFullDistanceToGoal(a->x, a->y, a->cost) > calcFullDistanceToGoal(b->x, b->y, b->cost));
+	});
+
+	_astarPQ.push(new Space(_begin.first, _begin.second));
+	while (!_astarPQ.empty())
+	{
+		Space* cur = _astarPQ.top();
+		_astarPQ.pop();
+		int n_x = cur->x, n_y = cur->y;
+		totalCost += cur->cost;
+
+		if (_mazeMatrix[n_y - 1][n_x - 1] == 'G')
+		{
+			_astarSolution = cur;
+			cout << "A*: Found goal!" << endl;
+			cout << "A* Total cost: " << totalCost << endl;
+			return;
+		}
+		
+		// moving right
+		if (IsValidPair(n_x + 1, n_y) && !_visited[n_y - 1][n_x])
+		{
+			fval = 2;
+			_astarPQ.push(new Space(n_x + 1, n_y, cur, fval));
+		}
+		//moving left
+		if (IsValidPair(n_x - 1, n_y) && !_visited[n_y - 1][n_x - 2])
+		{
+			fval = 4;
+			_astarPQ.push(new Space(n_x - 1, n_y, cur, fval));
+		}
+		// moving up
+		if (IsValidPair(n_x, n_y + 1) && !_visited[n_y][n_x - 1])
+		{
+			fval = 3;
+			_astarPQ.push(new Space(n_x, n_y + 1, cur, fval));
+		}
+		//moving down
+		if (IsValidPair(n_x, n_y - 1) && !_visited[n_y - 2][n_x - 1])
+		{
+			fval = 1;
+			_astarPQ.push(new Space(n_x, n_y - 1, cur, fval));
+		}
+
+		_visited[n_y - 1][n_x - 1] = true;
+	}
+}
+
+float Maze::calcEDistanceToGoal(int x, int y) const
+{
+	return sqrt(pow(x - _dest.first, 2) + pow(y - _dest.second, 2));
+}
+
+float Maze::calcFullDistanceToGoal(int x, int y, int fval) const
+{
+	return (sqrt(pow(x - _dest.first, 2) + pow(y - _dest.second, 2))) + fval;
+}
+
+/*bool Maze::compDistance(Space* lhs, Space* rhs)
+{
+return (calcEDistanceToGoal(lhs->x, lhs->y) > calcEDistanceToGoal(rhs->x, rhs->y));
+}*/
 
 bool Maze::SetStart(pair<int, int> n_start)
 {
@@ -665,11 +735,99 @@ void Maze::PrintGreedyResult()
 	cout << "Total nodes visited: " << visitedTotal << endl;
 
 	/*PRINT PATH*/
-	cout << "DFS Path: " << endl;
+	cout << "Greedy Path: " << endl;
 	for (int i = greedyPathVec.size() - 1; i >= 0; --i)
 	{
 		cout << '(' << greedyPathVec[i].first + 1 << ", "
 			<< greedyPathVec[i].second + 1 << ')';
+		if (i != 0)
+			cout << ", ";
+	}
+	cout << endl;
+	cout << "Press enter to continue!" << endl;
+	std::cin.ignore();
+}
+
+void Maze::PrintAStarResult()
+{
+	int printedWidth = (_mazeMatrix[0].size() * 2) + 2;
+	int visitedTotal = 0;
+	std::vector<std::pair<int, int>> astarPathVec = std::vector<std::pair<int, int>>();
+	Space* temp = _astarSolution;
+	/*FOLLOW PARENTS*/
+	while (temp->parent != nullptr)
+	{
+		astarPathVec.push_back(std::pair<int, int>(temp->x - 1, temp->y - 1));
+		temp = temp->parent;
+	}
+
+	/*TOP ROW*/
+	for (int i = 0; i < printedWidth; ++i)
+	{
+		if (i == 0)
+			cout << ((char)218);
+		else if (i == printedWidth - 1)
+			cout << ((char)191);
+		else
+			cout << ((char)196);
+	}
+	cout << endl;
+
+	/*MATRIX VALUES*/
+	for (int i = _mazeMatrix.size() - 1; i >= 0; --i)
+	{
+		cout << '|';
+		for (int j = 0; j < _mazeMatrix[0].size(); ++j)
+		{
+			if ((std::find(astarPathVec.begin(), astarPathVec.end(), std::pair<int, int>(j, i)) != astarPathVec.end())
+				&& (_mazeMatrix[i][j] != 'G'))
+				cout << '*';
+			else
+				cout << _mazeMatrix[i][j];
+
+			if (j == _mazeMatrix[0].size() - 1)
+				cout << " |";
+			else
+				cout << '|';
+			if (_visited[i][j]) ++visitedTotal;
+		}
+		cout << endl;
+		/*ROW SEPARATOR*/
+		if (i != 0)
+		{
+			for (int i = 0; i < printedWidth; ++i)
+			{
+				if (i == 0)
+					cout << '|';
+				else if (i == printedWidth - 1)
+					cout << '|';
+				else
+					cout << ((char)196);
+			}
+			cout << endl;
+		}
+	}
+
+	/*BOTTOM ROW*/
+	for (int i = 0; i < printedWidth; ++i)
+	{
+		if (i == 0)
+			cout << ((char)192);
+		else if (i == printedWidth - 1)
+			cout << ((char)217);
+		else
+			cout << ((char)196);
+	}
+	cout << endl;
+
+	cout << "Total nodes visited: " << visitedTotal << endl;
+
+	/*PRINT PATH*/
+	cout << "A* Path: " << endl;
+	for (int i = astarPathVec.size() - 1; i >= 0; --i)
+	{
+		cout << '(' << astarPathVec[i].first + 1 << ", "
+			<< astarPathVec[i].second + 1 << ')';
 		if (i != 0)
 			cout << ", ";
 	}
