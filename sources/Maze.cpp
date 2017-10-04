@@ -9,11 +9,8 @@ using namespace std;
 
 Maze::Maze()
 {
-	_bfsSolution = nullptr;
-	_dfsSolution = nullptr;
-	_greedySolution = nullptr;
-	_astarSolution = nullptr;
-	_bfsTotal = _dfsTotal = _greedyTotal = 0;
+	_bfsSolution = _dfsSolution = _greedySolution = _astarSolution = nullptr;
+	_bfsTotal = _dfsTotal = _greedyTotal = _astarTotal = 0;
 	_dest = _begin = make_pair(-1, -1);
 	_visited = nullptr;
 }
@@ -25,17 +22,9 @@ Maze::Maze(int x, int y, pair<int, int> begin, pair<int,int> end)
 	_bfsQueue = queue<Space*>();
 	_dfsStack = stack<Space*>();
 
-	/*comp = function<bool(Space*, Space*)>(bind(&Maze::compDistance, *this, 
-		std::placeholders::_1, std::placeholders::_2));
-	_greedyPQ = priority_queue<Space*, vector<Space*>,
-		function<bool(Space*, Space*)>>(comp);*/
+	_bfsSolution =_dfsSolution = _greedySolution = _astarSolution = nullptr;
+	_bfsTotal = _dfsTotal = _greedyTotal = _astarTotal = 0;
 
-	_bfsSolution = nullptr;
-	_dfsSolution = nullptr;
-	_greedySolution = nullptr;
-	_astarSolution = nullptr;
-	_bfsTotal = 0;
-	_dfsTotal = 0;
 }
 
 Maze::Maze(const Maze& existing)
@@ -52,6 +41,7 @@ Maze::Maze(const Maze& existing)
 	_bfsTotal = existing._bfsTotal;
 	_dfsTotal = existing._dfsTotal;
 	_greedyTotal = existing._greedyTotal;
+	_astarTotal = existing._astarTotal;
 	_begin = existing._begin;
 	_dest = existing._dest;
 
@@ -82,6 +72,7 @@ Maze::Maze(Maze&& existing)
 	_bfsTotal = existing._bfsTotal;
 	_dfsTotal = existing._dfsTotal;
 	_greedyTotal = existing._greedyTotal;
+	_astarTotal = existing._astarTotal;
 	_begin = existing._begin;
 	_dest = existing._dest;
 	
@@ -178,17 +169,18 @@ void Maze::DFS(Space* vertex)
 	{
 		int n_x = vertex->x, n_y = vertex->y;
 
+		if (IsValidPair(n_x, n_y + 1) && !_visited[n_y][n_x - 1])
+			DFS(new Space(n_x, n_y + 1, vertex));
+
+		if (IsValidPair(n_x, n_y - 1) && !_visited[n_y - 2][n_x - 1])
+			DFS(new Space(n_x, n_y - 1, vertex));
+
 		if (IsValidPair(n_x + 1, n_y) && !_visited[n_y - 1][n_x])
 			DFS(new Space(n_x + 1, n_y, vertex));
 
 		if (IsValidPair(n_x - 1, n_y) && !_visited[n_y - 1][n_x - 2])
 			DFS(new Space(n_x - 1, n_y, vertex));
 
-		if (IsValidPair(n_x, n_y + 1) && !_visited[n_y][n_x - 1])
-			DFS(new Space(n_x, n_y + 1, vertex));
-
-		if (IsValidPair(n_x, n_y - 1) && !_visited[n_y - 2][n_x - 1])
-			DFS(new Space(n_x, n_y - 1, vertex));
 	}
 	_dfsStack.pop();
 }
@@ -214,6 +206,7 @@ void Maze::GreedySearch()
 		_greedyPQ.pop();
 		int n_x = cur->x, n_y = cur->y;
 		totalCost += cur->cost;
+		_greedyTotal += 1;
 
 		if (_mazeMatrix[n_y - 1][n_x - 1] == 'G')
 		{
@@ -244,9 +237,7 @@ void Maze::AStarSearch()
 	resetMaze();
 	resetVisited();
 	int fval = 0, totalCost = 0;
-	/* This does not work! It sends the SAME fval. It should be different based on the space itself
-	 * Add a value in Space for cost of move?
-	 */
+
 	_astarPQ = priority_queue<Space*, vector<Space*>,
 		function<bool(Space*, Space*)>>([this](Space* a, Space* b)->bool {
 		return (calcFullDistanceToGoal(a->x, a->y, a->cost) > calcFullDistanceToGoal(b->x, b->y, b->cost));
@@ -259,6 +250,7 @@ void Maze::AStarSearch()
 		_astarPQ.pop();
 		int n_x = cur->x, n_y = cur->y;
 		totalCost += cur->cost;
+		_astarTotal += 1;
 
 		if (_mazeMatrix[n_y - 1][n_x - 1] == 'G')
 		{
@@ -559,6 +551,7 @@ void Maze::PrintBFSResult()
 	cout << "Total nodes visited: " << visitedTotal << endl;
 
 	/*PRINT PATH TRAVELED*/
+	unsigned int pathLen = 0;
 	cout << "BFS Path: " << endl;
 	for (int i = bfsPathVec.size() - 1; i >= 0; --i)
 	{
@@ -566,8 +559,10 @@ void Maze::PrintBFSResult()
 			 << bfsPathVec[i].second + 1 << ')';
 		if (i != 0)
 			cout << ", ";
+		++pathLen;
 	}
 	cout << endl;
+	cout << "Path length: " << pathLen << endl;
 	cout << "Press enter to continue!" << endl;
 	std::cin.ignore();
 }
@@ -647,6 +642,7 @@ void Maze::PrintDFSResult()
 	cout << "Total nodes visited: " << visitedTotal << endl;
 
 	/*PRINT PATH*/
+	unsigned int pathLen = 0;
 	cout << "DFS Path: " << endl;
 	for (int i = dfsPathVec.size() - 1; i >= 0; --i)
 	{
@@ -654,8 +650,10 @@ void Maze::PrintDFSResult()
 			<< dfsPathVec[i].second + 1 << ')';
 		if (i != 0)
 			cout << ", ";
+		++pathLen;
 	}
 	cout << endl;
+	cout << "Path length: " << pathLen << endl;
 	cout << "Press enter to continue!" << endl;
 	std::cin.ignore();
 }
@@ -736,14 +734,17 @@ void Maze::PrintGreedyResult()
 
 	/*PRINT PATH*/
 	cout << "Greedy Path: " << endl;
+	unsigned int pathLen = 0;
 	for (int i = greedyPathVec.size() - 1; i >= 0; --i)
 	{
 		cout << '(' << greedyPathVec[i].first + 1 << ", "
 			<< greedyPathVec[i].second + 1 << ')';
 		if (i != 0)
 			cout << ", ";
+		++pathLen;
 	}
 	cout << endl;
+	cout << "Path length: " << pathLen << endl;
 	cout << "Press enter to continue!" << endl;
 	std::cin.ignore();
 }
@@ -823,6 +824,7 @@ void Maze::PrintAStarResult()
 	cout << "Total nodes visited: " << visitedTotal << endl;
 
 	/*PRINT PATH*/
+	unsigned int pathLen = 0;
 	cout << "A* Path: " << endl;
 	for (int i = astarPathVec.size() - 1; i >= 0; --i)
 	{
@@ -830,8 +832,10 @@ void Maze::PrintAStarResult()
 			<< astarPathVec[i].second + 1 << ')';
 		if (i != 0)
 			cout << ", ";
+		++pathLen;
 	}
 	cout << endl;
+	cout << "Path lenth: " << pathLen << endl;
 	cout << "Press enter to continue!" << endl;
 	std::cin.ignore();
 }

@@ -72,6 +72,7 @@ private:
 	int _bfsTotal;
 	int _dfsTotal;
 	int _greedyTotal;
+	int _astarTotal;
 	/**
 	 * A 2-D array of bools (pointers to an array of pointers)
 	 * This is used in figuring which nodes have been visited
