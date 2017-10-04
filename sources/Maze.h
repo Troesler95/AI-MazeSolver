@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <stack>
+#include <functional>
 
 #pragma region Space Struct Definition
 
@@ -14,13 +15,13 @@
  */
 struct Space {
 	/*The X and Y co-ordinate in the maze which this structure represents*/
-	int x, y;
+	int x, y, cost;
 	/*This is used to back-trace after a solution is found (similar to a stack structure)*/
 	Space* parent;
 
 	/*Parameterized constructor for this structure*/
-	Space(int pos1, int pos2, Space* prnt=nullptr)
-		: x(pos1), y(pos2), parent(prnt) {}
+	Space(int pos1, int pos2, Space* prnt=nullptr, int cost=0)
+		: x(pos1), y(pos2), parent(prnt), cost(cost) {}
 };
 
 #pragma endregion
@@ -48,14 +49,30 @@ private:
 	Space* _bfsSolution;
 	/*Internal stack used in DFS*/
 	std::stack<Space*> _dfsStack;
+
+	float calcEDistanceToGoal(int, int) const;
+	// bool compDistance(Space*, Space*);
+
+	//std::function<bool(Space*, Space*)> comp;
+
+	/*Internal priority queue for use with greedy search*/
+	std::priority_queue<Space*, std::vector<Space*>, std::function<bool(Space*, Space*)>> _greedyPQ;
+	Space* _greedySolution;
+
+	float calcFullDistanceToGoal(int, int, int) const;
+	std::priority_queue<Space*, std::vector<Space*>, std::function<bool(Space*, Space*)>> _astarPQ;
+	Space* _astarSolution;
+
 	/*Filepath for output of maze solutions*/
-	char* _outFilePathBFS;
+	char* _outFilePathBFS; 
 	char* _outFilePathDFS;
 	/*pointer to the 'top' node in the DFS path found*/
 	Space* _dfsSolution;
 	/*Integer counters for number of nodes visited*/
 	int _bfsTotal;
 	int _dfsTotal;
+	int _greedyTotal;
+	int _astarTotal;
 	/**
 	 * A 2-D array of bools (pointers to an array of pointers)
 	 * This is used in figuring which nodes have been visited
@@ -133,6 +150,9 @@ public:
 	 * Uses heuristic knowledge of the maze
 	 * to solve the maze in a more efficient way
      */
+	void GreedySearch();
+
+	void AStarSearch();
 
 	#pragma endregion
 	
@@ -149,6 +169,8 @@ public:
 	void PrintMaze();
 	void PrintBFSResult();
 	void PrintDFSResult();
+	void PrintGreedyResult();
+	void PrintAStarResult();
 
 	void FilePrintBFSResult(char*);
 	void FilePrintDFSResult(char*);

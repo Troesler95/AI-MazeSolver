@@ -215,14 +215,16 @@ void Menu(std::string iniFilePath, bool output, std::pair<int, int> startPair, s
 			std::cout << "Menu:" << endl;
 			std::cout << "\t1. Solve maze with Breadth-First Search Algorithm" << endl;
 			std::cout << "\t2. Solve maze with Depth-First Search Algorithm" << endl;
-			std::cout << "\t3. Change starting point" << endl;
-			std::cout << "\t4. Change ending point" << endl;
-			std::cout << "\t5. Add walls" << endl;
-			std::cout << "\t6. Remove walls" << endl;
-			std::cout << "\t7. Load from new CSV file" << endl;
-			std::cout << "\t8. Exit program" << endl;
+			std::cout << "\t3. Solve maze with Greedy Heuristic Search Algorithm" << endl;
+			std::cout << "\t4. Solve maze with A* Heuristic Search Algorithm" << endl;
+			std::cout << "\t5. Change starting point" << endl;
+			std::cout << "\t6. Change ending point" << endl;
+			std::cout << "\t7. Add walls" << endl;
+			std::cout << "\t8. Remove walls" << endl;
+			std::cout << "\t9. Load from new CSV file" << endl;
+			std::cout << "\t10. Exit program" << endl;
 			std::cout << "\nChoice: ";
-			std::cin.getline(&choiceTemp, 2);
+			std::cin.getline(&choiceTemp, 3);
 			userChoice = std::stoi(&choiceTemp);
 			/*std::cin.ignore();
 			choiceTemp;*/
@@ -292,18 +294,26 @@ void Menu(std::string iniFilePath, bool output, std::pair<int, int> startPair, s
 				}
 				break;
 			case 3:
+				maze.GreedySearch();
+				maze.PrintGreedyResult();
+				break;
+			case 4:
+				maze.AStarSearch();
+				maze.PrintAStarResult();
+				break;
+			case 5:
 				temp = GetCoOrdsFromUser("Please enter the X,Y co-ordinates for the new start position: ");
 				setSuccessful = maze.SetStart(temp);
 				if (!setSuccessful)
 					std::cout << "Unable to set the new start position! Try again." << endl;
 				break;
-			case 4:
+			case 6:
 				temp = GetCoOrdsFromUser("Please enter the X,Y co-ordinates for the new end goal: ");
 				setSuccessful = maze.SetEnd(temp);
 				if (!setSuccessful)
 					std::cout << "Unable to set the new goal position! Try again." << endl;
 				break;
-			case 5:
+			case 7:
 				while (cont)
 				{
 					inputValid = false;
@@ -336,7 +346,7 @@ void Menu(std::string iniFilePath, bool output, std::pair<int, int> startPair, s
 					} while (!inputValid);
 				}
 				break;
-			case 6:
+			case 8:
 				while (cont)
 				{
 					inputValid = false;
@@ -371,7 +381,7 @@ void Menu(std::string iniFilePath, bool output, std::pair<int, int> startPair, s
 					} while (!inputValid);
 				}
 				break;
-			case 7:
+			case 9:
 				std::cout << "Please enter the filepath to the new .csv file: " << endl;
 				std::cin.getline(fileBuf, 255);
 				if (!string(fileBuf).empty())
@@ -384,7 +394,7 @@ void Menu(std::string iniFilePath, bool output, std::pair<int, int> startPair, s
 				maze = InitializeMazeFromFile(iniFilePath);
 				maze = GetOperationalMazeState(maze, startPair, goalPair);
 				break;
-			case 8:
+			case 10:
 				std::cout << "Exiting program..." << endl;
 				std::cin.get();
 				exit(0);
